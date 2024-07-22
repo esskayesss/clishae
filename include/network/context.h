@@ -24,4 +24,7 @@ typedef struct {
   HTTPBody    body;
 } Context;
 
+
+Context   *parse_context(const char *request);
+int       free_context(Context *ctx);
 #endif

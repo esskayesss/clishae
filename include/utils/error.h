@@ -6,13 +6,13 @@
 #include "logging.h"
 
 #define handle_err(format, ...) do {\
-  LOG_ERROR(format, ...);\
+  LOG_ERROR(format, ##__VA_ARGS__);\
   return 1;\
 } while(0);
 
 // TODO: kill thread instead of the entire process
 #define handle_fatal(format, ...) do {\
-  LOG_FATAL(format, ...);\
+  LOG_FATAL(format, ##__VA_ARGS__);\
   exit(EXIT_FAILURE);\
 } while(0);
 

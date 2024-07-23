@@ -4,6 +4,7 @@ LIBS =
 
 # Find all source files and test source files recursively
 SRCS = $(shell find src -name "*.c")
+SRCS := $(filter-out src/main.c, $(SRCS))
 SRC_OBJS = $(SRCS:src/%.c=obj/%.o)
 
 TEST_SRCS = $(shell find tests -name "*.c")

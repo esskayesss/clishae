@@ -19,7 +19,7 @@ typedef enum {
   LEVEL_SUCCESS,
 } LogLevel;
 
-int initialize_logger(const char* logfile, LogLevel level);
+int initialize_logger(const char* filepath, LogLevel level);
 int close_logger(void);
 int update_loglevel(LogLevel new_level);
 int log_message(LogLevel msg_level, const char *fn_name, const int l_num, const char *msg_format, ...);

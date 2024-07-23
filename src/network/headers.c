@@ -53,3 +53,39 @@ parse_headers(const char *headers_block){
 
   return headers;
 }
+
+char *
+get_header_value(const HTTPHeaders *headers, const char *key){
+  char *lkey = strdup(key);
+  strtolower(lkey);
+  for(size_t i = 0; i < headers->headers_len; i++){
+    if (strcmp(lkey, headers->headers[i].key) == 0){
+      LOG_INFO("found header for key `%s`:\n{%s: %s}", key, headers->headers[i].key, headers->headers[i].value);
+      return headers->headers[i].value;
+    }
+  }
+
+  LOG_INFO("could not find header for key %s", key);
+  return NULL;
+}
+
+int
+free_headers(HTTPHeaders *headers){
+  if (!headers) return 0;
+
+  if (headers->headers){
+    size_t i = 0;
+    for(; i < headers->headers_len; i++){
+      LOG_DEBUG("freeing header {%s: %s} ...", headers->headers[i].key, headers->headers[i].value);
+      free(headers->headers[i].key);
+      free(headers->headers[i].value);
+    }
+    free(headers->headers);
+    LOG_DEBUG("freed headers->headers");
+  }
+
+  free(headers);
+  LOG_DEBUG("freed headers struct");
+
+  return 0;
+}

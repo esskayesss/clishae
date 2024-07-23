@@ -10,5 +10,8 @@ main() {
     "Content-Length: 69420\r\n";
 
   initialize_logger(NULL, LEVEL_TRACE);
-  parse_headers(headers_block);
+  HTTPHeaders *headers = parse_headers(headers_block);
+  const char *value = get_header_value(headers, "authorization");
+  LOG_INFO("found value %s", value);
+  free_headers(headers);
 }

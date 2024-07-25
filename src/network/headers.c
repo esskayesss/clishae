@@ -10,6 +10,7 @@ static inline void strtolower(char *p){
   for(; *p != '\0'; p++) *p = tolower(*p);
 }
 
+
 HTTPHeaders*
 parse_headers(const char *headers_block){
   HTTPHeaders* headers = (HTTPHeaders *)malloc(sizeof(HTTPHeaders));
@@ -40,6 +41,7 @@ parse_headers(const char *headers_block){
     strtolower(header.key);
 
     // strndup value
+    if(*colon == ' ') colon++;
     header.value = strndup(colon, crlf - colon);
     strtolower(header.value);
     LOG_DEBUG("%s: %s", header.key, header.value);
@@ -53,6 +55,7 @@ parse_headers(const char *headers_block){
 
   return headers;
 }
+
 
 char *
 get_header_value(const HTTPHeaders *headers, const char *key){
@@ -68,6 +71,7 @@ get_header_value(const HTTPHeaders *headers, const char *key){
   LOG_INFO("could not find header for key %s", key);
   return NULL;
 }
+
 
 int
 free_headers(HTTPHeaders *headers){

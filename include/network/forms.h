@@ -28,6 +28,7 @@ typedef struct {
 
 MultipartForm   *parse_multipart_form(const char *body, const char *boundary);
 int             free_multipart(MultipartForm *form);
+char            *get_field_value(const MultipartForm *form, const char *key);
 
 // TODO more methods to save files, etc
 #endif

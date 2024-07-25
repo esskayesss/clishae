@@ -12,19 +12,22 @@ typedef enum {
 } HTTPMethods;
 
 typedef struct {
-  size_t  content_length;
-  char    *content;
+  size_t  content_length; // length of the request body
+  char    *content;       // copy of the request body
 } HTTPBody;
 
 typedef struct {
-  HTTPMethods method;
-  char        *route;
-  char        *version;
-  HTTPHeaders *headers;
-  HTTPBody    body;
+  HTTPMethods method;     // HTTP method of the request
+  char        *route;     // route of the request
+  char        *version;   // HTTP version of the request
+  HTTPHeaders *headers;   // headers in the HTTP request
+  HTTPBody    body;       // body of the request
 } Context;
 
 
+// parses the entire context from a request
 Context   *parse_context(const char *request);
+
+// frees a context struct
 int       free_context(Context *ctx);
 #endif

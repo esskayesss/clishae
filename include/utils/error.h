@@ -2,8 +2,11 @@
 #define ERROR_H
 
 #include <stdlib.h>
+#include <errno.h>
 #include <pthread.h>
 #include "logging.h"
+
+#define ERRMSG    strerror(errno)
 
 #define handle_err(format, ...) do {\
   LOG_ERROR(format, ##__VA_ARGS__);\

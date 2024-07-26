@@ -24,7 +24,7 @@ test: $(TEST_BINS)
 
 bin: $(SRC_OBJS)
 	@mkdir -p bin
-	$(CC) $(BASE_FLAGS) $(SRC_OBJS) -o bin/clishae
+	$(CC) $(BASE_FLAGS) src/main.c $(SRC_OBJS) -o bin/clishae
 
 $(SRC_OBJS): obj/%.o: src/%.c
 	@mkdir -p $(dir $@)

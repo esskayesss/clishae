@@ -7,13 +7,14 @@
 
 
 Context *
-parse_context(const char *request){
+parse_context(int cfd, const char *request){
   Context *ctx = (Context *)malloc(sizeof(Context));
   if (!ctx) {
     LOG_ERROR("failed to allocate memory for context: %s", ERRMSG);
     return NULL;
   }
   memset(ctx, 0, sizeof(Context));
+  ctx->cfd = cfd;
   const char *crlf = "\r\n";
 
   // Parse HTTP method
@@ -94,7 +95,7 @@ parse_context(const char *request){
   ctx->body.content = NULL;
   char *cl_header = get_header_value(headers, "content-length");
   if (cl_header == NULL) {
-    LOG_INFO("No content-length header, not reading body.");
+    LOG_DEBUG("No content-length header, not reading body.");
   } else {
     const size_t content_length = strtoul(cl_header, NULL, 10);
     if (content_length > 8192) {
@@ -121,6 +122,7 @@ parse_context(const char *request){
     ctx->body.content = content;
   }
 
+  LOG_INFO("Parsed request into a context struct successfully.");
   return ctx;
 }
 

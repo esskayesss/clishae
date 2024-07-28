@@ -2,9 +2,11 @@
 #define FSUTILS_H
 
 #include <stddef.h>
+#include <stdio.h>
 
-int     read_file(const char *path, char **contents);
-int     new_file(const char *path, const char *contents);
+size_t  read_file(const char *path, char **contents);
+char    *new_file(const char *contents);
+size_t  get_filesize(FILE *file);
 int     delete_file(const char *path);
 
 #endif

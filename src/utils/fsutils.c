@@ -7,41 +7,87 @@
 #include "utils/error.h"
 #include "utils/logging.h"
 
-int read_file(const char *path, char **contents){
-  FILE *file = fopen(path, "r");
-  if(!file){
-    return 1;
+
+char *
+get_random_name(){
+  char *filename = (char *)malloc(25);
+  sprintf(filename, "%lu", (unsigned long)time(NULL));
+
+  return filename;
+}
+
+
+size_t read_file(const char *path, char **contents) {
+  FILE *file = fopen(path, "r"); // Use binary mode
+  if (!file){
+    LOG_ERROR("could not open file: %s", ERRMSG);
+    return -1;
   }
 
-  struct stat file_stat;
-  stat(path, &file_stat);
-  unsigned long file_size = file_stat.st_size;
+  fseek(file, 0, SEEK_END);
+  size_t file_size = ftell(file);
+  rewind(file);
 
-  char *body = malloc(file_size + 1);
-  fread(body, 1, file_size, file);
-  body[file_size] = '\0';
+  char *body = malloc(file_size);
+  if (!body) {
+    LOG_ERROR("failed to allocate memory for body: %s", ERRMSG);
+    fclose(file);
+    return -1;
+  }
+  size_t read_size = fread(body, 1, file_size, file);
+  if (read_size != file_size) {
+    LOG_ERROR("failed to read from file: %s", ERRMSG);
+    free(body);
+    fclose(file);
+    return -1;
+  }
   *contents = body;
-
   fclose(file);
   return file_size;
 }
 
-int
-new_file(const char *path, const char *contents){
-  FILE *file = fopen(path, "w");
-  if(!file){
-    LOG_ERROR("could not open file for writing: %s", ERRMSG);
-    return 1;
+size_t
+get_filesize(FILE *file){
+  fseek(file, 0, SEEK_END);
+  long size = ftell(file);
+  fseek(file, 0, SEEK_SET);
+  return size;
+}
+
+char *
+new_file(const char *contents) {
+  char *rand_name = get_random_name();
+  if (!rand_name) {
+    LOG_ERROR("could not generate random name");
+    return NULL;
   }
+
+  char path[256];
+  snprintf(path, sizeof(path), "/tmp/clishae/raw/%s", rand_name);
+
+  FILE *file = fopen(path, "w");
+  if (!file) {
+    LOG_ERROR("could not open file for writing: %s", strerror(errno));
+    free(rand_name);
+    return NULL;
+  }
+
   size_t nitems = strlen(contents);
   size_t wbytes = fwrite(contents, 1, nitems, file);
-  if (nitems > wbytes){
-    LOG_ERROR("fwrite failed after writing %lu items: %s", wbytes, ERRMSG);
-    return 1;
+  if (nitems > wbytes) {
+    LOG_ERROR("fwrite failed after writing %lu items: %s", wbytes, strerror(errno));
+    fclose(file);
+    free(rand_name);
+    return NULL;
   }
+
   fclose(file);
 
-  return 0;
+  char *get_url = malloc(256);
+  snprintf(get_url, 256, "http://localhost:8080/raw/%s\n", rand_name);
+
+  free(rand_name);
+  return get_url;
 }
 
 int

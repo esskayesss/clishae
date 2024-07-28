@@ -1,75 +1,120 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 #include <stdio.h>
 #include "network/response.h"
+#include "network/context.h"
 #include "utils/fsutils.h"
 #include "utils/logging.h"
+#include "utils/error.h"
+
+#define BUF_SIZE 8192
 
 
-static const char* get_mime_type(const char* filename) {
+static char* get_mime_type(const char* filename) {
     if (strstr(filename, ".html")) return "text/html";
+    if (strstr(filename, ".mp4")) return "video/mp4";
     if (strstr(filename, ".css")) return "text/css";
     if (strstr(filename, ".js")) return "application/javascript";
-    if (strstr(filename, ".jpg")) return "image/jpeg";
+    if (strstr(filename, ".jpeg")) return "image/jpeg";
     if (strstr(filename, ".png")) return "image/png";
     if (strstr(filename, ".ico")) return "image/x-icon"; // MIME type for favicon
-    return "application/octet-stream"; // Default MIME type
+    return "text/plain"; // Default MIME type
 }
 
-char *
-get_response(const ResponseCodes code, const unsigned long content_length, const char *content){
-  char headers[256];
-  if(content){
-    sprintf(headers, "Content-Type: text/plain\r\nContent-Length: %lu\r\n", content_length);
-  } else {
-    strcpy(headers, "");
-    content = "";
+ssize_t send_all(int socket, const char *buffer, size_t length) {
+  size_t total_sent = 0;
+  ssize_t sent;
+
+  while (total_sent < length) {
+    sent = send(socket, buffer + total_sent, length - total_sent, 0);
+    if (sent == -1) {
+      // Handle recoverable errors
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        LOG_WARN("EAGAIN | EWOULDBLOCK");
+        usleep(1000);
+        continue;
+      } else {
+        LOG_ERROR("send failed: %s", strerror(errno));
+        return -1;
+      }
+    }
+    // Handle case where no data was sent
+    if (sent == 0) {
+      break;
+    }
+    total_sent += sent;
   }
-  char *response = (char *)malloc(strlen(content) + 256);
-  sprintf(response, "HTTP/1.1 %s\r\n%s\r\n%s", status_str[code], headers, content);
-  return response;
+  return total_sent;
 }
 
+size_t
+send_response(const int cfd, const ResponseCodes code, const char *message){
+  size_t bytes_sent = 0;
+  size_t content_length = strlen(message);
 
-char *
-get_file_response(const ResponseCodes code, const char *filepath) {
-    char *file_contents = NULL;
-    int file_size = read_file(filepath, &file_contents);
-    if (file_size < 0) {
-        LOG_ERROR("Failed to read file: %s", filepath);
-        return get_response(RESPONSE_404, 0, NULL);
-    }
+  char meta[256];
+  sprintf(meta, "HTTP/1.1 %s\r\nContent-Type: text/plain\r\nContent-Length: %lu\r\nConnection: close\r\n\r\n", status_str[code], content_length);
+  bytes_sent += send_all(cfd, meta, strlen(meta));
+  bytes_sent += send_all(cfd, message, content_length);
 
-    const char *mime_type = get_mime_type(filepath);
-    char headers[256];
-    sprintf(headers, "Content-Type: %s\r\nContent-Length: %d\r\n", mime_type, file_size);
-
-    char *response = malloc(file_size + 256);
-    sprintf(response, "HTTP/1.1 %s\r\n%s\r\n%s", status_str[code], headers, file_contents);
-
-    free(file_contents);
-    return response;
+  return bytes_sent;
 }
 
-char *
-get_file_raw_response(const ResponseCodes code, const char *filepath) {
-    char *file_contents = NULL;
-    int file_size = read_file(filepath, &file_contents);
-    if (file_size < 0) {
-        LOG_ERROR("Failed to read file: %s", filepath);
-        return get_response(RESPONSE_404, 0, NULL);
+size_t serve_file(const int cfd, const ResponseCodes code, const char *filepath) {
+  size_t bytes_sent = 0;
+  char *mime = get_mime_type(filepath);
+  FILE *file = NULL;
+
+  if(strcmp(mime, "text/plain") == 0)
+    file = fopen(filepath, "r");
+  else
+    file = fopen(filepath, "rb");
+  if (!file) {
+    LOG_ERROR("could not open file `%s`: %s", filepath, strerror(errno));
+    return -1;
+  }
+
+  size_t content_length = get_filesize(file);
+  if (content_length == 0) {
+    fclose(file);
+    LOG_ERROR("could not determine file size or file is empty");
+    return -1;
+  }
+
+  char meta[256];
+  snprintf(meta, sizeof(meta),
+      "HTTP/1.1 %s\r\nContent-Type: %s\r\nContent-Length: %lu\r\n\r\n",
+      status_str[code], get_mime_type(filepath), content_length);
+
+  ssize_t header_sent = send_all(cfd, meta, strlen(meta));
+  if (header_sent < 0) {
+    fclose(file);
+    return -1;
+  }
+  bytes_sent += header_sent;
+  LOG_DEBUG("headers:\n%s", meta);
+
+  char buffer[1024];
+  size_t bytes_read;
+  while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+    ssize_t sent = send_all(cfd, buffer, bytes_read);
+    if (sent < 0) {
+      fclose(file);
+      return -1;
     }
+    bytes_sent += sent;
+  }
+  printf("\n");
 
-    const char *mime_type = get_mime_type(filepath);
-    char headers[256];
-    sprintf(headers, "HTTP/1.1 %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n\r\n",
-            status_str[code], mime_type, file_size);
+  if (ferror(file)) {
+    LOG_ERROR("error reading file: %s", strerror(errno));
+    fclose(file);
+    return -1;
+  }
 
-    char *response = malloc(strlen(headers) + file_size);
-    memcpy(response, headers, strlen(headers));
-    memcpy(response + strlen(headers), file_contents, file_size);
-
-    free(file_contents);
-    return response;
+  fclose(file);
+  return bytes_sent;
 }

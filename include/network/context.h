@@ -17,6 +17,7 @@ typedef struct {
 } HTTPBody;
 
 typedef struct {
+  int         cfd;
   HTTPMethods method;     // HTTP method of the request
   char        *route;     // route of the request
   char        *version;   // HTTP version of the request
@@ -26,7 +27,7 @@ typedef struct {
 
 
 // parses the entire context from a request
-Context   *parse_context(const char *request);
+Context   *parse_context(int cfd, const char *request);
 
 // frees a context struct
 int       free_context(Context *ctx);

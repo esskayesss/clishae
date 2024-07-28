@@ -9,7 +9,7 @@ get_header(const Context *ctx, const char *key){
   if(val){
     return val; 
   }
-  LOG_INFO("returning NULL");
+  LOG_DEBUG("returning NULL");
   return NULL;
 }
 
@@ -18,7 +18,7 @@ is_multipart_form(const Context *ctx){
   const char *content_type = get_header(ctx, "content-type");
   char *ptr = strstr(content_type, "multipart/form-data;");
   if (!ptr){
-    LOG_INFO("the body does not have multipart form data.");
+    LOG_DEBUG("the body does not have multipart form data.");
     return NULL;
   }
   ptr = strstr(content_type, "=");

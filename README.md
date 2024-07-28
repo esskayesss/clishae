@@ -8,6 +8,8 @@ To build the server executable, use the following command:
 make bin
 ```
 
+> Note that this server expects the `/tmp/clishae/raw` directory to exist. Make sure that it's created.
+
 ### Running the Server
 
 Once built, launch the server by running the executable:
